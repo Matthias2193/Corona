@@ -54,6 +54,7 @@ rki_cases <- rename(rki_cases, deaths = AnzahlTodesfall)
 rki_cases$date <- as.Date(rki_cases$Meldedatum)
 
 ##Vaccination
+vaccination <- vaccination[vaccination$TargetGroup == "ALL",]
 vaccination <- vaccination[vaccination$ReportingCountry == "DE",]
 vaccination$year <- lapply(vaccination$YearWeekISO, function(x){
   return(unlist(strsplit(x, "-"))[1])
@@ -82,7 +83,7 @@ for(n in colnames(vaccination)[3:ncol(vaccination)]){
   vaccination[paste("cummulative", n, sep = "_")] <- 0
   for(r in 1:nrow(vaccination)){
     vaccination[r, paste("cummulative", n, sep = "_")] <- sum(
-      filter(vaccination, year < vaccination[r, "year"] || (calenderWeek <=  vaccination[r, "calenderWeek"] && year == vaccination[r, "year"]))[n]
+      filter(vaccination, year < vaccination[r, ]$year | (calenderWeek <=  vaccination[r,]$calenderWeek & year == vaccination[r, ]$year))[n]
     )
   }
 }
@@ -176,11 +177,57 @@ new_data$Meldedatum <- as.Date(new_data$Meldedatum)
 new_data <- rename(new_data, date = Meldedatum)
 new_data[,c("date.x", "date.y")] <- NULL
 
+new_data$weekday <- weekdays(new_data$date)
 
 data <- na.omit(new_data)
 data <- arrange(data, date)
 data_min <- new_data[,c("date", "cases", "deaths")]
 data_min <- arrange(data_min, date)
 
+
+
 write.csv(data, file = "Data/data.csv")
 write.csv(data_min, file = "Data/data_min.csv")
+
+
+#Clean data
+data <- read.csv("Data/Data.csv")
+data[,9:22] <- NULL
+
+#Combine data of all vaccines
+data$FirstDose <- apply(data[,grepl("FirstDose",colnames(data))][,1:4]  , 1, sum)
+data$SecondDose <- apply(data[,grepl("SecondDose",colnames(data))][,1:4]  , 1, sum)
+data$DoseAdditional <- apply(data[,grepl("DoseAdditional",colnames(data))][,1:4]  , 1, sum)
+
+doses <- c("FirstDose", "SecondDose", "DoseAdditional1")
+vacs <- c("COM", "MOD", "AZ", "JANSS")
+for(d in doses){
+  temp_names <- c()
+  for(v in vacs){
+    temp_names <- c(temp_names, paste("cummulative_", v, "_FirstDose", sep=""))
+  }
+  data[,paste("cummulative", d, sep="_")] <- apply(data[, temp_names], 1, sum)
+}
+
+#Remove numbers of detections of variants to instead focus on percentage
+data[,9:42] <- NULL
+data[,grepl("number_detections",colnames(data))] <- NULL
+
+#Remove all variants with max percentage < 1
+remove_cols <- c()
+for(n in grep("percent_variant",colnames(data))){
+  if(summary(data[,n])["Max."] < 1){
+    remove_cols <- c(remove_cols, n)
+  }
+}
+data[,remove_cols] <- NULL
+
+#Remove all measures which are constant through the observed time frame
+for(n in colnames(data)){
+  if(length(summary(data[,n])) == 2){
+    data[,n] <- NULL
+  }
+}
+
+
+
