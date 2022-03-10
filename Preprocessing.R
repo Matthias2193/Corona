@@ -204,7 +204,7 @@ vacs <- c("COM", "MOD", "AZ", "JANSS")
 for(d in doses){
   temp_names <- c()
   for(v in vacs){
-    temp_names <- c(temp_names, paste("cummulative_", v, "_FirstDose", sep=""))
+    temp_names <- c(temp_names, paste("cummulative_", v, "_", d, sep=""))
   }
   data[,paste("cummulative", d, sep="_")] <- apply(data[, temp_names], 1, sum)
 }
@@ -229,5 +229,32 @@ for(n in colnames(data)){
   }
 }
 
+data$X <- NULL
+
+#Remove duplicated columns
+data <- data[!duplicated(as.list(data))]
+
+#Add duration for interventions
+restriction_names <- colnames(data)[10:27]
+for(r in restriction_names){
+  new_col <- paste(r,"duration",sep = "_")
+  data[,new_col] <- 0
+  for(s in 2:nrow(data)){
+    if(data[,r][s]){
+      data[s,new_col] <- data[,new_col][s-1] + 1
+    } 
+  }
+}
+
+#Add dummy variables for weekday
+for(d in unique(data$weekday)){
+  data[,d] <- ifelse(data$weekday == d, 1, 0)
+}
+data$Sonntag <- NULL
+data$weekday <- NULL
+data$calenderWeek <- NULL
+data <- data[,c("date",colnames(data)[ !(colnames(data) %in% "date")])]
+#Save data
+write.csv(data, file = "Data/data_cleaned.csv", row.names = F)
 
 
