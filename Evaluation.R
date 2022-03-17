@@ -1,5 +1,5 @@
 #Function to evaluate the models
-eval_func <- function(pred, y, model_name){
+eval_func <- function(pred, y, model_name, v = NULL){
   #Correlation
   c <- cor(pred, y)
   
@@ -12,6 +12,9 @@ eval_func <- function(pred, y, model_name){
   results <- data.frame(matrix(c(c, MAE, r_squared), nrow = 1))
   colnames(results) <- c("Correlation", "MAE", "RSquared")
   results$Model <- model_name
+  if(!is.null(v)){
+    results$V <- v
+  }
   return(results)
 }
 
