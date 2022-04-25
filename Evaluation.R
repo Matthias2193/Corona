@@ -1,5 +1,6 @@
 #Function to evaluate the models
-eval_func <- function(pred, y, model_name, v = NULL){
+eval_func <- function(pred, y, model_name, v = NULL,scale_value = 1){
+  pred = pred*scale_value
   #Correlation
   c <- cor(pred, y)
   

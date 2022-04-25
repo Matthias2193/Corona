@@ -26,9 +26,12 @@ cases$continentExp <- NULL
 
 
 ##Cases RKI
-rki_cases[, 1:3] <- NULL
-rki_cases[, 7:ncol(rki_cases)] <- NULL
-rki_cases[,c("Geschlecht", "ObjectId")] <- NULL
+
+# rki_cases[, 1:3] <- NULL
+# rki_cases[, 7:ncol(rki_cases)] <- NULL
+# rki_cases[,c("Geschlecht", "ObjectId")] <- NULL
+
+rki_cases[, !colnames(rki_cases) %in% c("Altersgruppe", "Meldedatum", "AnzahlFall", "AnzahlTodesfall")] <- NULL
 
 rki_cases <- rki_cases %>% 
   group_by(Altersgruppe, Meldedatum) %>%
@@ -168,11 +171,23 @@ variants <- variants %>%
 variants$year <- as.character.numeric_version(variants$year)
 variants$calenderWeek <- sprintf("%02d",variants$calenderWeek )
 
+##R-Wert
+r_wert <- read.csv("Data/Nowcast_R_aktuell.csv")
+r_wert <- r_wert[,c("Datum","PS_7_Tage_R_Wert")]
+colnames(r_wert) <- c("Datum","R_Wert")
+r_wert$Datum <- as.Date(r_wert$Datum)
+r_wert$day <- strftime(r_wert$Datum, format = "%d")
+r_wert$month <- strftime(r_wert$Datum, format = "%m")
+r_wert$year <- strftime(r_wert$Datum, format = "%Y")
+r_wert$Datum <- NULL
+
+#Merge Data
 new_data <- merge(rki_cases, vaccination, by = c("calenderWeek", "year"), all.x = T)
 new_data <- merge(new_data, testing, by = c("calenderWeek", "year"), all.x = T)
 new_data <- merge(new_data, hosp_daily, by = c("day", "month", "year", "calenderWeek"), all.x = T)
 new_data <- merge(new_data, new_measures, by = c("day", "month", "year"), all.x = T)
 new_data <- merge(new_data, variants, by = c("calenderWeek", "year"), all.x = T)
+new_data <- merge(new_data, r_wert, by = c("day", "month", "year"), all.x = T)
 new_data$Meldedatum <- as.Date(new_data$Meldedatum)
 new_data <- rename(new_data, date = Meldedatum)
 new_data[,c("date.x", "date.y")] <- NULL
@@ -183,6 +198,7 @@ data <- na.omit(new_data)
 data <- arrange(data, date)
 data_min <- new_data[,c("date", "cases", "deaths")]
 data_min <- arrange(data_min, date)
+
 
 
 
@@ -256,5 +272,3 @@ data$calenderWeek <- NULL
 data <- data[,c("date",colnames(data)[ !(colnames(data) %in% "date")])]
 #Save data
 write.csv(data, file = "Data/data_cleaned.csv", row.names = F)
-
-
