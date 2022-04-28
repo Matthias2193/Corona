@@ -216,7 +216,7 @@ data$SecondDose <- apply(data[,grepl("SecondDose",colnames(data))][,1:4]  , 1, s
 data$DoseAdditional <- apply(data[,grepl("DoseAdditional",colnames(data))][,1:4]  , 1, sum)
 
 doses <- c("FirstDose", "SecondDose", "DoseAdditional1")
-vacs <- c("COM", "MOD", "AZ", "JANSS")
+vacs <- c("COM", "MOD", "AZ", "JANSS", "NVXD")
 for(d in doses){
   temp_names <- c()
   for(v in vacs){
@@ -224,9 +224,11 @@ for(d in doses){
   }
   data[,paste("cummulative", d, sep="_")] <- apply(data[, temp_names], 1, sum)
 }
+for(v in vacs){
+  data <- data[,!grepl(v, colnames(data))]
+}
 
 #Remove numbers of detections of variants to instead focus on percentage
-data[,9:42] <- NULL
 data[,grepl("number_detections",colnames(data))] <- NULL
 
 #Remove all variants with max percentage < 1
@@ -251,7 +253,8 @@ data$X <- NULL
 data <- data[!duplicated(as.list(data))]
 
 #Add duration for interventions
-restriction_names <- colnames(data)[10:27]
+restriction_names <- colnames(data)[colnames(data) %in% colnames(new_measures)] 
+restriction_names <- restriction_names[!restriction_names %in% c("date","day","month","year")]
 for(r in restriction_names){
   new_col <- paste(r,"duration",sep = "_")
   data[,new_col] <- 0
@@ -262,6 +265,12 @@ for(r in restriction_names){
   }
 }
 
+#Add restrictions longer than 14 days
+for(r in restriction_names){
+  new_col <- paste(r,"14",sep = "_")
+  data[,new_col] <- ifelse(data[,paste(r,"duration",sep = "_")] >= 14, TRUE, FALSE)
+}
+
 #Add dummy variables for weekday
 for(d in unique(data$weekday)){
   data[,d] <- ifelse(data$weekday == d, 1, 0)
@@ -269,6 +278,9 @@ for(d in unique(data$weekday)){
 data$Sonntag <- NULL
 data$weekday <- NULL
 data$calenderWeek <- NULL
+data$day <- NULL
 data <- data[,c("date",colnames(data)[ !(colnames(data) %in% "date")])]
+data <- data[,!grepl("duration", colnames(data))]
+
 #Save data
 write.csv(data, file = "Data/data_cleaned.csv", row.names = F)

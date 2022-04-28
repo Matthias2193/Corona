@@ -39,56 +39,56 @@ deaths_result_df <- data.frame(Correlation = c(),
                                Model = c(),
                                V = c())
 
-size <- c(5,10,20,50,100)
-xv <- c("1se", "min",
-       "pick", "none")
-mv_grid <- expand.grid(size, xv)
-for(v in 1:nrow(mv_grid)){
-  print(v)
-  size <- mv_grid$Var1[v]
-  xv <- mv_grid$Var2[v]
-  mvpart_run1 <- mvpart(data.matrix(train[,c(cases_target, deaths_target)])~.,
-                        train[,feature_colnames], method="mrt", size=size, xv = xv)
-  mv_predict1 <- data.frame(predict(mvpart_run1, newdata=test, type="matrix"))
-  colnames(mv_predict1) <- c("cases_pred","deaths_pred")
-  cases_result_df <- rbind(cases_result_df,eval_func(mv_predict1$cases_pred, test[,cases_target],"MVPart1",v))
-  deaths_result_df <- rbind(deaths_result_df,eval_func(mv_predict1$deaths_pred, test[,deaths_target],"MVPart1",v))
-  
-  
-  # cmds.diss (Classical scaling of Dissimilarity Measures)
-  mvpart_run2 <- mvpart(cmds.diss(train[,c(cases_target, deaths_target)], meth="euc")~.,
-                        train[,feature_colnames], method="mrt",  size=size, xv = xv)
-  mv_predict2 <- data.frame(predict(mvpart_run2, newdata=test, type="matrix"))
-  colnames(mv_predict2) <- c("cases_pred","deaths_pred")
-  cases_result_df <- rbind(cases_result_df,eval_func(mv_predict2$cases_pred, test[,cases_target],"MVPart2",v))
-  deaths_result_df <- rbind(deaths_result_df,eval_func(mv_predict2$deaths_pred, test[,deaths_target],"MVPart2",v))
-}
-
-tune_results <- data.frame(c_cor = c(),
-                           c_mae = c(),
-                           c_rsq = c(),
-                           d_cor = c(),
-                           d_mae = c(),
-                           d_rsq = c(),
-                           model = c())
-
-for(m in unique(cases_result_df$Model)){
-    temp <- cases_result_df[cases_result_df$Model == m,]
-    best <- c(temp[order(-temp$Correlation),]$V[1],
-              temp[order(temp$MAE),]$V[1],
-              temp[order(-temp$RSquared),]$V[1])
-
-    temp <- deaths_result_df[deaths_result_df$Model == m,]
-    best <- c(best, c(temp[order(-temp$Correlation),]$V[1],
-                      temp[order(temp$MAE),]$V[1],
-                      temp[order(-temp$RSquared),]$V[1]))
-    best <- data.frame(matrix(best, nrow = 1))
-    best$model <- m
-    colnames(best) <- c("c_cor", "c_mae", "c_rsq", "d_cor", "d_mae", "d_rsq", "model")
-    tune_results <- rbind(tune_results, best)
-
-  }
-  
+# size <- c(5,10,20,50,100)
+# xv <- c("1se", "min",
+#        "pick", "none")
+# mv_grid <- expand.grid(size, xv)
+# for(v in 1:nrow(mv_grid)){
+#   print(v)
+#   size <- mv_grid$Var1[v]
+#   xv <- mv_grid$Var2[v]
+#   mvpart_run1 <- mvpart(data.matrix(train[,c(cases_target, deaths_target)])~.,
+#                         train[,feature_colnames], method="mrt", size=size, xv = xv)
+#   mv_predict1 <- data.frame(predict(mvpart_run1, newdata=test, type="matrix"))
+#   colnames(mv_predict1) <- c("cases_pred","deaths_pred")
+#   cases_result_df <- rbind(cases_result_df,eval_func(mv_predict1$cases_pred, test[,cases_target],"MVPart1",v))
+#   deaths_result_df <- rbind(deaths_result_df,eval_func(mv_predict1$deaths_pred, test[,deaths_target],"MVPart1",v))
+#   
+#   
+#   # cmds.diss (Classical scaling of Dissimilarity Measures)
+#   mvpart_run2 <- mvpart(cmds.diss(train[,c(cases_target, deaths_target)], meth="euc")~.,
+#                         train[,feature_colnames], method="mrt",  size=size, xv = xv)
+#   mv_predict2 <- data.frame(predict(mvpart_run2, newdata=test, type="matrix"))
+#   colnames(mv_predict2) <- c("cases_pred","deaths_pred")
+#   cases_result_df <- rbind(cases_result_df,eval_func(mv_predict2$cases_pred, test[,cases_target],"MVPart2",v))
+#   deaths_result_df <- rbind(deaths_result_df,eval_func(mv_predict2$deaths_pred, test[,deaths_target],"MVPart2",v))
+# }
+# 
+# tune_results <- data.frame(c_cor = c(),
+#                            c_mae = c(),
+#                            c_rsq = c(),
+#                            d_cor = c(),
+#                            d_mae = c(),
+#                            d_rsq = c(),
+#                            model = c())
+# 
+# for(m in unique(cases_result_df$Model)){
+#     temp <- cases_result_df[cases_result_df$Model == m,]
+#     best <- c(temp[order(-temp$Correlation),]$V[1],
+#               temp[order(temp$MAE),]$V[1],
+#               temp[order(-temp$RSquared),]$V[1])
+# 
+#     temp <- deaths_result_df[deaths_result_df$Model == m,]
+#     best <- c(best, c(temp[order(-temp$Correlation),]$V[1],
+#                       temp[order(temp$MAE),]$V[1],
+#                       temp[order(-temp$RSquared),]$V[1]))
+#     best <- data.frame(matrix(best, nrow = 1))
+#     best$model <- m
+#     colnames(best) <- c("c_cor", "c_mae", "c_rsq", "d_cor", "d_mae", "d_rsq", "model")
+#     tune_results <- rbind(tune_results, best)
+# 
+#   }
+#   
 # for(v in 1:nrow(var_grid)){
 #   print(v)
 #   ntree <- var_grid$Var1[v]
@@ -185,9 +185,11 @@ ggplot(data, aes(x = date, y = deaths)) +
 
 
 #7 days ahead ----
-
-train <- read.csv("Data/train.csv")
-test <- read.csv("Data/test.csv")
+data <- read.csv("Data/data_base.csv")
+data[,29:42] <- NULL
+feature_colnames <- colnames(data)[!(colnames(data) %in% c("date","cases_1Ahead","deaths_1Ahead", "cases_7Ahead", "deaths_7Ahead"))]
+train <- data[0:(nrow(data)-50),]
+test <- tail(data,50)
 cases_target <- "cases_7Ahead"
 deaths_target <- "deaths_7Ahead"
 
@@ -481,15 +483,32 @@ deaths_rf <- randomForest(deaths_1Ahead~., data = train[,c(feature_colnames,deat
 deaths_rf_pred <- predict(deaths_rf, test[,feature_colnames])
 deaths_result_df_1 <- rbind(deaths_result_df,eval_func(deaths_rf_pred, test[,deaths_target],"Basic RF"))
 
+cases_result_df_1$day <- 1
+cases_result_df_7$day <- 7
+cases_results <- rbind(cases_result_df_1, cases_result_df_7)
+cases_results$target <- "cases"
+
+deaths_result_df_1$day <- 1
+deaths_result_df_7$day <- 7
+deaths_results <- rbind(deaths_result_df_1, deaths_result_df_7)
+deaths_results$target <- "deaths"
+
+results_base_7 <- rbind(cases_results,deaths_results)
+save(results_base_7, file = "BaseResults7.RData")
 
 
-###Scaled
+
+
+###Scaled 
 
 load(file = "tuning.RData")
 #7 days ahead ----
 
-train <- read.csv("Data/train.csv")
-test <- read.csv("Data/test.csv")
+data <- read.csv("Data/data_base.csv")
+data[,29:42] <- NULL
+feature_colnames <- colnames(data)[!(colnames(data) %in% c("date","cases_1Ahead","deaths_1Ahead", "cases_7Ahead", "deaths_7Ahead"))]
+train <- data[0:(nrow(data)-50),]
+test <- tail(data,50)
 cases_target <- "cases_7Ahead"
 deaths_target <- "deaths_7Ahead"
 
@@ -797,3 +816,19 @@ mtry <- pars[2]
 deaths_rf <- randomForest(deaths_1Ahead~., data = train[,c(feature_colnames,deaths_target)], ntree = ntree, mtry = mtry)
 deaths_rf_pred <- predict(deaths_rf, test[,feature_colnames])
 deaths_result_df_1_scaled <- rbind(deaths_result_df,eval_func(deaths_rf_pred, test[,deaths_target],"Basic RF",scale_value = scale_value_deaths))
+
+
+
+
+cases_result_df_1_scaled$day <- 1
+cases_result_df_7_scaled$day <- 7
+cases_results <- rbind(cases_result_df_1_scaled, cases_result_df_7_scaled)
+cases_results$target <- "cases"
+
+deaths_result_df_1_scaled$day <- 1
+deaths_result_df_7_scaled$day <- 7
+deaths_results <- rbind(deaths_result_df_1_scaled, deaths_result_df_7_scaled)
+deaths_results$target <- "deaths"
+
+results_base_scaled7 <- rbind(cases_results,deaths_results)
+save(results_base_scaled7, file = "BaseResultsScaled7.RData")
