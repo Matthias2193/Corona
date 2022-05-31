@@ -2,6 +2,7 @@
 library(randomForest)
 library(forecast)
 library(tidyverse)
+source("Helper.R")
 
 #Load data
 data <- read.csv("Data/data_cleaned.csv")
@@ -113,39 +114,47 @@ data_tests <- data[,c("date", keep_cols)]
 write.csv(data_tests, file = "Data/data_tests.csv", row.names = F)
 
 
-get_data <- function(add = c(), scale = F, ahead = 7, lag = 7,scale_method="max"){
-  data <- read.csv("Data/data_base.csv")
-  if(scale){
-    #Get scaling values from the training data
-    cases_scaler <- max(data$cases[1:(length(data$cases)-50)])
-    deaths_scaler <- max(data$deaths[1:(length(data$deaths)-50)])
-    #Scale all values
-    data$cases <- data$cases/cases_scaler
-    data$deaths <- data$deaths/deaths_scaler
-  }
-  #Add Lag-variables for cases and deaths
-  for(s in 1:ahead){
-    data[paste("lag_cases",s,sep="")] <- c(rep(NA,s), data$cases[1:(nrow(data)-s)])
-    data[paste("lag_deaths",s,sep="")] <- c(rep(NA,s), data$deaths[1:(nrow(data)-s)])
-  }
+data$date <- as.Date(data$date, fomat = ("%Y-%m-%d"))
 
-  #Add next day values as targets for prediction
-  data[paste("cases_", ahead,"Ahead",sep="")] <- c(data$cases[(ahead+1):nrow(data)],rep(NA, ahead))
-  data[paste("deaths_", ahead,"Ahead",sep="")] <- c(data$deaths[(ahead+1):nrow(data)],rep(NA, ahead))
+#Train-Test split
+ahead <- 7
+lag <- 7
+add <- c("measures14")
+scaling <- F
+cases_target <- paste("cases_", ahead, "Ahead", sep = "")
+deaths_target <- paste("deaths_", ahead, "Ahead", sep = "")
 
-  data <- na.omit(data)
-  
-  for(a in add){
-    data_add <- read.csv(paste("Data/data_",a,".csv",sep=""))
-    data <- merge(data, data_add, by = "date", all.x = T)
-  }
-  if(scale){
-    return(list("data" = data, "cases_scaler" = cases_scaler, "deaths_scaler" = deaths_scaler))
-  } else{
-    return(data)
-  }
-  
+
+data <- get_data(add = add, scale = scaling, ahead = ahead, lag = lag)
+train <- data$train
+test <- data$test
+
+measures14_select <- read.csv("Data/data_measures14.csv")
+cases_lm <- glm(cases_7Ahead~., data = train[,!colnames(train) %in% c("deaths_1Ahead","deaths_7Ahead","cases_1Ahead", "date")])
+lm_sum <- summary(cases_lm)
+lm_coef <- lm_sum$coefficients
+keep_cols <- rownames(lm_coef)[lm_coef[,4] < 0.05]
+keep_cols <- keep_cols[grepl("TRUE",keep_cols)]
+for(k in 1:length(keep_cols)){
+  keep_cols[k] <- substr(keep_cols[k],1,(nchar(keep_cols[k])-4))
 }
+measures14_select <- measures14_select[c("date",keep_cols)]
+write.csv(measures14_select,"Data/data_measures14_select.csv", row.names = F)
 
-new_data <- get_data(add = c("variants", "measures"), scale = T)
-new_data2 <- new_data$data
+
+add <- c("measures")
+data <- get_data(add = add, scale = scaling, ahead = ahead, lag = lag)
+train <- data$train
+test <- data$test
+
+measures_select <- read.csv("Data/data_measures.csv")
+cases_lm <- glm(cases_7Ahead~., data = train[,!colnames(train) %in% c("deaths_1Ahead","deaths_7Ahead","cases_1Ahead", "date")])
+lm_sum <- summary(cases_lm)
+lm_coef <- lm_sum$coefficients
+keep_cols <- rownames(lm_coef)[lm_coef[,4] < 0.05]
+keep_cols <- keep_cols[grepl("TRUE",keep_cols)]
+for(k in 1:length(keep_cols)){
+  keep_cols[k] <- substr(keep_cols[k],1,(nchar(keep_cols[k])-4))
+}
+measures_select <- measures_select[c("date",keep_cols)]
+write.csv(measures_select,"Data/data_measures_select.csv", row.names = F)
